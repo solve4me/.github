@@ -1,0 +1,58 @@
+name: Time Tracking
+
+on:
+  workflow_call:
+    inputs:
+      project_number:
+        description: "GitHub Project Number (e.g., 1)"
+        required: true
+        type: string
+      hours_field:
+        description: "Name of the numeric field in the Project (e.g., Logged Hours)"
+        required: false
+        type: string
+        default: "Logged Hours"
+      issue_number:
+        description: "Number of the commented issue"
+        required: true
+        type: string
+      repo_owner:
+        description: "Owner of the source repository"
+        required: true
+        type: string
+      repo_name:
+        description: "Name of the source repository"
+        required: true
+        type: string
+    secrets:
+      ops_token:
+        description: >
+          PAT with scopes: repo, project.
+          Required because the workflow runs outside the source repository.
+        required: true
+
+jobs:
+  log-time:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout products-ops (fetches the script)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/.github
+          token: ${{ secrets.ops_token }}
+          path: .github
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Log Hours
+        env:
+          GITHUB_TOKEN: ${{ secrets.ops_token }}
+          PROJECT_NUMBER: ${{ inputs.project_number }}
+          HOURS_FIELD: ${{ inputs.hours_field }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          REPO_OWNER: ${{ inputs.repo_owner }}
+          REPO_NAME: ${{ inputs.repo_name }}
+        run: node .github/.github/scripts/time-tracking.js

@@ -11,9 +11,11 @@ function parseHours(comment) {
 		/^\/log\s+(?:(\d+(?:\.\d+)?)\s*h)?\s*(?:(\d+)\s*m)?/im,
 	);
 	if (!match || (!match[1] && !match[2])) return null;
+
 	const h = Number.parseFloat(match[1] || 0);
 	const m = Number.parseInt(match[2] || 0, 10);
 	const total = h + m / 60;
+
 	return total > 0 ? total : null;
 }
 
@@ -91,21 +93,22 @@ async function getProjectFields(projectId) {
 	return data.node?.fields?.nodes ?? [];
 }
 
-async function updateNumberField(projectId, itemId, fieldId, value) {
+async function updateNumberField(issueId, fieldId, value) {
 	await graphql(
 		`
-    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: Float!) {
-      updateProjectV2ItemFieldValue(input: {
-        projectId: $projectId
-        itemId: $itemId
-        fieldId: $fieldId
-        value: { number: $value }
-      }) {
-        projectV2Item { id }
-      }
-    }
-  `,
-		{ projectId, itemId, fieldId, value },
+ mutation($issueId: ID!, $fieldId: ID!, $value: String!) {
+ updateIssueFieldValue(input: {
+ issueId: $issueId
+ issueField: {
+ fieldId: $fieldId
+ value: $value
+ }
+ }) {
+ clientMutationId
+ }
+ }
+ `,
+		{ issueId, fieldId, value: value.toString() },
 	);
 }
 
@@ -157,7 +160,8 @@ async function main() {
 	}
 
 	// 4. Update the project item with the absolute accumulated hours
-	await updateNumberField(projectId, taskItem.id, hField.id, totalHours);
+	await updateNumberField(taskIssue.id, hField.id, totalHours);
+
 	console.log(
 		`Project updated successfully! New absolute value: ${totalHours}h`,
 	);
